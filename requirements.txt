@@ -1,9 +1,9 @@
 beautifulsoup4
-pyppeteer
+playwright
+google-generativeai
 fastapi[all]
 uvicorn
 python-dotenv
-groq
 boto3
 datetime
 requests
