@@ -12,3 +12,4 @@ sentencepiece
 transformers
 colorlog
 python-json-logger
+supabase

@@ -1,10 +1,13 @@
-# main_api.py
-# --------------------------------------------------------------------------- #
-# High-level HTTP API for discovering and crawling Feishu (Lark) public docs
-# --------------------------------------------------------------------------- #
+"""
+High‑level HTTP API for discovering and crawling Feishu (Lark) public docs
+---------------------------------------------------------------------------
+This version persists every crawl result directly to Supabase (`navigation_category`
+& `web_navigation`) via the helper functions in `util.supabase_utils`.
+"""
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
@@ -16,7 +19,10 @@ from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel
 
-from util.db_util import upsert_doc
+# --------------------------------------------------------------------------- #
+# Supabase helpers – replace legacy upsert_doc
+# --------------------------------------------------------------------------- #
+from util.supabase_utils import save_category, save_web_navigation
 
 # ---------- 初始化日志，必须在任何 logger 声明之前 ----------
 from util.logging_util import init_logging
@@ -83,6 +89,7 @@ class DiscoverRequest(BaseModel):
 # --------------------------------------------------------------------------- #
 # Helper Functions
 # --------------------------------------------------------------------------- #
+
 def validate_authorization(authorization: Optional[str]) -> None:
     if not authorization:
         raise HTTPException(status_code=400, detail="Missing Authorization header")
@@ -150,6 +157,55 @@ def discover_feishu_links(keyword: str, max_results: int = 5) -> List[str]:
 
 
 # --------------------------------------------------------------------------- #
+# Supabase persistence helper
+# --------------------------------------------------------------------------- #
+
+def persist_to_supabase(record: dict) -> None:
+    """Upsert *both* navigation_category & web_navigation through supabase_utils."""
+    if not record:
+        return
+    
+    cat_name = "ai-doc"
+    save_category(
+        name=cat_name,
+        title="AI DOC",
+        sort=0,
+    )
+
+    logger.info("save_category: %s", cat_name)
+
+    # ② 主表 – 字段映射
+    save_web_navigation(
+        {
+            "name": record.get("title"),
+            "title": record.get("title"),
+            # 新老模型字段对齐：summary / description ≈ content
+            "content": record.get("summary")
+            or record.get("description")
+            or record.get("content"),
+            "detail": record.get("detail"),
+            "url": record.get("url"),
+            # screenshot/thumbnail 兼容
+            "image_url": record.get("screenshot_data") or record.get("image_url"),
+            "thumbnail_url": record.get("screenshot_thumbnail_data")
+            or record.get("thumbnail_url"),
+            # links 单独序列化，若无则存整条记录方便调试
+            "website_data": json.dumps(
+                record.get("links") if record.get("links") is not None else record,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+            "collection_time": record.get("collection_time"),
+            "star_rating": record.get("star_rating") or 0,
+            "tag_name": ",".join(record.get("tags", []))
+            if isinstance(record.get("tags"), list)
+            else (record.get("tag_name") or None),
+            "category_name": cat_name,
+        }
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Synchronous Endpoint
 # --------------------------------------------------------------------------- #
 @app.post("/site/crawl")
@@ -164,16 +220,13 @@ async def scrape(request: URLRequest, authorization: Optional[str] = Header(None
     # 解析分流
     if "feishu.cn/docx/" in url:
         result = await parse_feishu_doc(url)
-        if result:
-            upsert_doc(result)
     elif "feishu.cn/wiki/" in url:
         result = await parse_feishu_wiki(url)
-        if result:
-            upsert_doc(result)
     else:
         result = await website_crawler.scrape_website(url, tags, languages)
-        if result:
-            upsert_doc(result)
+
+    if result:
+        persist_to_supabase(result)
 
     code = 200 if result else 10001
     msg = "success" if result else "fail"
@@ -206,8 +259,7 @@ async def scrape_async(
 async def async_worker(url, tags, languages, callback_url, key):
     result = await website_crawler.scrape_website(url, tags, languages)
     if result:
-        from util.db_util import upsert_doc
-        upsert_doc(result)
+        persist_to_supabase(result)
     try:
         logger.info("callback begin: %s", callback_url)
         response = requests.post(
@@ -245,8 +297,7 @@ async def crawl_discover(
                     url, request.tags, request.languages
                 )
             if res:
-                from util.db_util import upsert_doc
-                upsert_doc(res)
+                persist_to_supabase(res)
                 results.append(res)
 
         return {"code": 200, "msg": "success", "data": results}

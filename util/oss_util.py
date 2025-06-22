@@ -54,7 +54,7 @@ class OSSUtil:
 
     def get_file_url(self, file_key: str) -> str:
         """生成带域名的最终访问链接，优先使用自定义域名"""
-        logger.info(f"✅ 当前自定义域名: {self.S3_CUSTOM_DOMAIN}")
+        # logger.info(f"✅ 当前自定义域名: {self.S3_CUSTOM_DOMAIN}")
         if self.S3_CUSTOM_DOMAIN:
             domain = self.S3_CUSTOM_DOMAIN.replace("https://", "").replace("http://", "").rstrip("/")
             return f"https://{domain}/{file_key}"
