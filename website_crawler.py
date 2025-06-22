@@ -7,9 +7,11 @@ from playwright.async_api import async_playwright
 from util.common_util import CommonUtil
 from util.llm_util import LLMUtil
 from util.oss_util import OSSUtil
+from util.visited_util import VisitedRegistry
 
 llm = LLMUtil()
 oss = OSSUtil()
+registry = VisitedRegistry()      # 全局单例即可
 logger = logging.getLogger(__name__)
 
 MODERN_UA = (
@@ -25,6 +27,10 @@ class WebsitCrawler:
     async def scrape_website(self, url, tags=None, languages=None):
         start_time = time.time()
         logger.info("正在处理：" + url)
+        # ❶ 若已扫描过，直接返回 None / or {} 由上层决定是否忽略
+        if registry.has(url):
+            logger.info(f"跳过重复链接：{url}")
+            return None
 
         if not url.startswith("http"):
             url = "https://" + url
@@ -72,6 +78,9 @@ class WebsitCrawler:
             logger.error(f"处理 {url} 站点异常，错误信息: {e}")
             return None
         finally:
+            # ❷ 抓取成功才写入；也可以按需把失败的也记掉
+            if 'title' in locals():
+                registry.add(url)
             logger.info(f"处理 {url} 用时：{int(time.time() - start_time)} 秒")
 
     async def _init_browser(self, playwright):

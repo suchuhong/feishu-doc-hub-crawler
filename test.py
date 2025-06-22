@@ -11,6 +11,9 @@ import re
 # .venv\Scripts\activate
 # pip uninstall pyppeteer -y
 
+# python -m pip install colorlog
+# python -m pip install python-json-logger
+
 def is_valid_feishu_link(url: str) -> bool:
     url = url.strip()
     return re.match(r"^https://[\w\-]+\.feishu\.cn/(wiki|docx|sheets)/[A-Za-z0-9]+", url) is not None

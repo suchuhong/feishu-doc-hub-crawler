@@ -62,3 +62,5 @@ screenshot_*.png
 
 # Local development configuration
 instance/
+
+util/*.db
