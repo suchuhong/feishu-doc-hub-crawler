@@ -1,24 +1,28 @@
 import logging
 import os
+import sys
+import re
 from typing import List, Optional
 
 import requests
-from dotenv import load_dotenv
 from fastapi import FastAPI, Header, BackgroundTasks, HTTPException
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 from website_crawler import WebsitCrawler
 from parsers.feishu import parse_feishu_doc
-import sys
+from parsers.feishu_wiki import parse_feishu_wiki
 
+# ⬇️ 安装 googlesearch-python: pip install googlesearch-python
+from googlesearch import search
 
-
+# 初始化
 app = FastAPI()
 website_crawler = WebsitCrawler()
 load_dotenv()
 system_auth_secret = os.getenv('AUTH_SECRET')
 
-# 设置日志记录
+# 日志设置
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(filename)s - %(funcName)s - %(lineno)d - %(levelname)s - %(message)s'
@@ -26,6 +30,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# ----------- 请求模型 ------------
 class URLRequest(BaseModel):
     url: str
     tags: Optional[List[str]] = None
@@ -37,64 +42,14 @@ class AsyncURLRequest(URLRequest):
     key: str
 
 
-@app.post('/site/crawl')
-async def scrape(request: URLRequest, authorization: Optional[str] = Header(None)):
-    url = request.url
-    tags = request.tags  # tag数组
-    languages = request.languages  # 需要翻译的多语言列表
-
-    if system_auth_secret:
-        # 配置了非空的auth_secret，才验证
-        validate_authorization(authorization)
-
-    # ✅ 新增判断：如果是 Feishu 文档链接，则走自定义解析器
-    if "feishu.cn/docx/" in url:
-        result = parse_feishu_doc(url.strip())
-    else:
-        result = await website_crawler.scrape_website(url.strip(), tags, languages)
-    # result = await website_crawler.scrape_website(url.strip(), tags, languages)
-
-    # 若result为None,则 code="10001"，msg="处理异常，请稍后重试"
-    code = 200
-    msg = 'success'
-    if result is None:
-        code = 10001
-        msg = 'fail'
-
-    # 将数据映射到 'data' 键下
-    response = {
-        'code': code,
-        'msg': msg,
-        'data': result
-    }
-    return response
+class DiscoverRequest(BaseModel):
+    keyword: str
+    max_results: Optional[int] = 5
+    tags: Optional[List[str]] = None
+    languages: Optional[List[str]] = None
 
 
-@app.post('/site/crawl_async')
-async def scrape_async(background_tasks: BackgroundTasks, request: AsyncURLRequest,
-                       authorization: Optional[str] = Header(None)):
-    url = request.url
-    callback_url = request.callback_url
-    key = request.key  # 请求回调接口，放header Authorization: 'Bear key'
-    tags = request.tags  # tag数组
-    languages = request.languages  # 需要翻译的多语言列表
-
-    if system_auth_secret:
-        # 配置了非空的auth_secret，才验证
-        validate_authorization(authorization)
-
-    # 直接发起异步请求:使用background_tasks后台运行
-    background_tasks.add_task(async_worker, url.strip(), tags, languages, callback_url, key)
-
-    # 若result为None,则 code="10001"，msg="处理异常，请稍后重试"
-    code = 200
-    msg = 'success'
-    response = {
-        'code': code,
-        'msg': msg
-    }
-    return response
-
+# ---------- 工具函数 --------------
 def validate_authorization(authorization):
     if not authorization:
         raise HTTPException(status_code=400, detail="Missing Authorization header")
@@ -102,23 +57,98 @@ def validate_authorization(authorization):
         raise HTTPException(status_code=401, detail="Authorization is error")
 
 
+def is_valid_feishu_link(url: str) -> bool:
+    return re.match(r"https://[\w\-]+\.feishu\.cn/(docx|sheets)/[\w\-]+", url) is not None
+
+
+def discover_feishu_links(keyword: str, max_results: int) -> List[str]:
+    query = f"{keyword} site:feishu.cn/docx OR site:feishu.cn/sheets"
+    results = search(query, num_results=max_results)
+    return list(filter(is_valid_feishu_link, results))
+
+
+# ---------- 同步处理接口 ----------
+@app.post('/site/crawl')
+async def scrape(request: URLRequest, authorization: Optional[str] = Header(None)):
+    url = request.url
+    tags = request.tags
+    languages = request.languages
+
+    if system_auth_secret:
+        validate_authorization(authorization)
+
+    result = None
+    if "feishu.cn/docx/" in url:
+        result = await parse_feishu_doc(url.strip())
+    elif "feishu.cn/wiki/" in url:
+        result = await parse_feishu_wiki(url.strip())
+    else:
+        result = await website_crawler.scrape_website(url.strip(), tags, languages)
+
+    code = 200 if result else 10001
+    msg = "success" if result else "fail"
+
+    return {
+        "code": code,
+        "msg": msg,
+        "data": result
+    }
+
+
+# ---------- 异步处理接口 ----------
+@app.post('/site/crawl_async')
+async def scrape_async(background_tasks: BackgroundTasks, request: AsyncURLRequest,
+                       authorization: Optional[str] = Header(None)):
+    if system_auth_secret:
+        validate_authorization(authorization)
+
+    background_tasks.add_task(async_worker, request.url.strip(), request.tags,
+                              request.languages, request.callback_url, request.key)
+    return {"code": 200, "msg": "success"}
+
+
 async def async_worker(url, tags, languages, callback_url, key):
-    # 爬虫处理封装为一个异步任务
     result = await website_crawler.scrape_website(url.strip(), tags, languages)
-    # 通过requests post 请求调用call_back_url， 携带参数result， heaer 为key
     try:
-        logger.info(f'callback begin:{callback_url}')
-        response = requests.post(callback_url, json=result, headers={'Authorization': 'Bearer ' + key})
+        logger.info(f'callback begin: {callback_url}')
+        response = requests.post(callback_url, json=result, headers={'Authorization': f'Bearer {key}'})
         if response.status_code != 200:
-            logger.error(f'callback error:{callback_url}', response.text)
+            logger.error(f'callback error: {response.text}')
         else:
-            logger.info(f'callback success:{callback_url}')
+            logger.info('callback success')
     except Exception as e:
-        logger.error(f'call_back exception:{callback_url}', e)
+        logger.error(f'callback exception: {e}')
 
 
+# ---------- 新增公开链接发现接口 ----------
+@app.post('/site/crawl_discover')
+async def crawl_discover(request: DiscoverRequest, authorization: Optional[str] = Header(None)):
+    if system_auth_secret:
+        validate_authorization(authorization)
+
+    try:
+        urls = discover_feishu_links(request.keyword, request.max_results or 5)
+        results = []
+        for url in urls:
+            print(url)
+            if "feishu.cn/docx" in url:
+                res = parse_feishu_doc(url)
+            elif "feishu.cn/wiki" in url:
+                res = await parse_feishu_wiki(url.strip())
+            else:
+                res = await website_crawler.scrape_website(url, request.tags, request.languages)
+            if res:
+                results.append(res)
+
+        return {"code": 200, "msg": "success", "data": results}
+
+    except Exception as e:
+        logger.error(f"crawl_discover error: {e}")
+        return {"code": 10001, "msg": "处理异常，请稍后重试", "data": []}
+
+
+# ---------- 启动服务 ----------
 if __name__ == '__main__':
     import uvicorn
     print("当前 Python 解释器路径:", sys.executable)
     uvicorn.run(app, host="0.0.0.0", port=8040)
-    
