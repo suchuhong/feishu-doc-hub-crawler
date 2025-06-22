@@ -58,13 +58,21 @@ def validate_authorization(authorization):
 
 
 def is_valid_feishu_link(url: str) -> bool:
-    return re.match(r"https://[\w\-]+\.feishu\.cn/(docx|sheets)/[\w\-]+", url) is not None
+    url = url.strip()
+    return re.match(r"^https://[\w\-]+\.feishu\.cn/(wiki|docx|sheets)/[\w\-]+", url) is not None
 
+def discover_feishu_links(keyword: str, max_results: int = 5) -> List[str]:
+    from googlesearch import search
+    query = f"{keyword} site:feishu.cn/wiki OR site:feishu.cn/sheets OR site:feishu.cn/docx"
 
-def discover_feishu_links(keyword: str, max_results: int) -> List[str]:
-    query = f"{keyword} site:feishu.cn/docx OR site:feishu.cn/sheets"
-    results = search(query, num_results=max_results)
-    return list(filter(is_valid_feishu_link, results))
+    raw_results = list(search(query, num_results=max_results))
+    print("Raw search results:")
+    for url in raw_results:
+        print(url, "=>", is_valid_feishu_link(url))
+
+    valid_links = [url for url in raw_results if is_valid_feishu_link(url)]
+    print("Valid links:", valid_links)
+    return valid_links
 
 
 # ---------- 同步处理接口 ----------
@@ -128,11 +136,15 @@ async def crawl_discover(request: DiscoverRequest, authorization: Optional[str] 
 
     try:
         urls = discover_feishu_links(request.keyword, request.max_results or 5)
+        # 输出 urls 的 值
+        for url in urls:
+            print(url)
+            print("url --------------------------------")
         results = []
         for url in urls:
             print(url)
             if "feishu.cn/docx" in url:
-                res = parse_feishu_doc(url)
+                res = await parse_feishu_doc(url)
             elif "feishu.cn/wiki" in url:
                 res = await parse_feishu_wiki(url.strip())
             else:
