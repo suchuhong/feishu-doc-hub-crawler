@@ -1,35 +1,20 @@
-# Tap4 AI Crawler
+# Feishu Document Hub Crawler
 
-Tap4 AI Crawler 是由 [tap4.ai](https://tap4.ai) 开发的开源爬虫，它将网站 Url 转换为使用 LLM 总结的网站信息。包括强大的抓取、爬取和数据提取功能，以及网页截图功能。使用 Tap4 AI Crawler，您不仅可以轻松更新 AI 工具目录中的 AI 工具详细信息，还可以生成网站摘要。
+Feishu Document Hub Crawler 是由 [tap4.ai](https://tap4.ai) 开发的开源爬虫，专门设计用于抓取和提取飞书（Lark）文档和知识库内容。它可以将飞书文档转换为使用 LLM 总结的内容摘要。包括强大的文档抓取、数据提取功能，以及文档截图功能。使用 Feishu Document Hub Crawler，您可以轻松提取并处理飞书文档、知识库和表格中的内容。
 
-该项目基于 Python，非常轻量级，易于维护，适合对 AI 工具目录感兴趣的个人开发者，也适合对 Python 感兴趣的学习者。我们欢迎大家 fork 和 star。
+该项目基于 Python，非常轻量级，易于维护，适合对文档处理和知识管理感兴趣的个人开发者，也适合对 Python 爬虫技术感兴趣的学习者。我们欢迎大家 fork 和 star。
 
 简体中文 | [English](./README.md)
 
-# 请在 Product Hunt 支持下 Tap4 AI
-
-<a href="https://www.producthunt.com/posts/ai-tools-directory-by-tap4-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-ai&#0045;tools&#0045;directory&#0045;by&#0045;tap4&#0045;ai" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=464357&theme=light" alt="AI&#0032;Tools&#0032;Directory&#0032;by&#0032;Tap4&#0032;AI - Open&#0045;source&#0032;AI&#0032;navigation&#0032;&#0038;&#0032;discovery&#0032;with&#0032;multi&#0045;language | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-
 ## 特征
 
-- 获取输入网站的标题、描述和介绍
-- 对输入网站进行截图
-- 支持使用 LLM（llama3/chatgpt）处理网站介绍并生成 SEO 友好的 Markdown 描述
+- 专门爬取飞书（Lark）文档、知识库和表格
+- 获取飞书文档的标题、描述和内容
+- 对飞书文档进行截图
+- 支持使用 LLM（llama3/chatgpt）处理文档内容并生成 SEO 友好的 Markdown 描述
+- 通过关键词发现公开的飞书文档
 - 快速配置
 - 快速部署
-
-![tai4-ai](./images/tap4-ai.png)
-
-## 感谢关注链接
-
-欢迎关注我们的 Twitter: https://x.com/tap4ai
-
-如果觉得项目对你有帮助，欢迎请我喝杯咖啡：
-
-<a href="https://www.buymeacoffee.com/tap4ai0o" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
-
-如果你对项目有兴趣，欢迎添加我微信: helloleo2023, 备注: "tap4 ai 开源"，也可以扫描二维码:
-![tap4-ai-wx](./images/tap4-ai-wechat.jpg)
 
 ## 快速开始
 
@@ -58,7 +43,7 @@ Tap4 AI Crawler 是由 [tap4.ai](https://tap4.ai) 开发的开源爬虫，它将
 ]
 ```
 
-- 为 R2 API 创建 R2 API Token，并选择具有对象读写权限的权限。保存您的参数：ENDPOINT_URL、BUCKET_NAME、ACCESS_KEY_ID、SECRET_ACCESS_KEY、CUSTOM_DOMAIN。这些参数将在.tap4-ai-crawler 的.env 文件中配置。
+- 为 R2 API 创建 R2 API Token，并选择具有对象读写权限的权限。保存您的参数：ENDPOINT_URL、BUCKET_NAME、ACCESS_KEY_ID、SECRET_ACCESS_KEY、CUSTOM_DOMAIN。这些参数将在 feishu-doc-hub 的 .env 文件中配置。
   ![Create-R2-API-Token](./images/Create-R2-API-Token.png)
 
   ![Cloudflare-R2-Token](./images/Cloudflare-R2-Token.png)
@@ -67,7 +52,7 @@ Tap4 AI Crawler 是由 [tap4.ai](https://tap4.ai) 开发的开源爬虫，它将
 
 在 Zeabur 选择 Fork 后的 Github 仓库部署，并在 Zeabur 配置环境变量，或者手动修改代码仓库的`.env` 文件，环境变量如下：
 
-- `GROQ_API_KEY`: Groq 的 key，申请[Groq key](https://console.groq.com/keys)
+- `OPENROUTER_API_KEY`: openrouter 的 key，申请[Groq key](https://openrouter.ai/settings/keys)
 - `S3_ENDPOINT_URL`: S3 的 endpoint，申请[Cloudflare R2](https://www.cloudflare.com/zh-cn/developer-platform/r2/)
 - `S3_BUCKET_NAME`: S3 的 bucket name
 - `S3_ACCESS_KEY_ID`: S3 的 access key id
@@ -88,7 +73,8 @@ Tap4 AI Crawler 是由 [tap4.ai](https://tap4.ai) 开发的开源爬虫，它将
 #### (1) 克隆此项目
 
 ```sh
-git clone https://github.com/6677-ai/tap4-ai-crawler.git
+git clone https://github.com/6677-ai/feishu-doc-hub.git
+cd feishu-doc-hub/crawler
 ```
 
 #### (2) 在 groq 申请 llama3 的 key
@@ -124,7 +110,7 @@ AUTH_SECRET=****
 install python 依赖
 
 ```sh
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 运行
@@ -140,36 +126,44 @@ python main_api.py
 可以使用 curl 发送 Post 请求验证 API 是否可用。
 请求参数说明:
 
-- 格式: Json format,
-- 参数: url (例如: https://tap4.ai)
+- 格式: Json format
+- 参数: url (例如: https://example.feishu.cn/wiki/wikcnxxxxxxxxxx)
 
 请求示例如下:
 
 ```sh
-curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer xxxxx" -d '{"url": "https://tap4.ai", "tags": [ "selected tags: ai-detector","chatbot","text-writing","image","code-it"]}' http://127.0.0.1:8040/site/crawl
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer xxxxx" -d '{"url": "https://example.feishu.cn/wiki/wikcnxxxxxxxxxx", "tags": ["document","wiki","knowledge-base"]}' http://127.0.0.1:8040/site/crawl
+```
+
+### 发现飞书文档
+
+您还可以使用发现 API 基于关键词查找公开的飞书文档：
+
+```sh
+curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer xxxxx" -d '{"keyword": "搜索关键词", "max_results": 5}' http://127.0.0.1:8040/site/crawl_discover
 ```
 
 返回参数:
 
 - 格式: Json
-- 参数: data-description: 网站描述
-- 参数: data-detail: 网站具体介绍
-- 参数: data-screenshot_data: 网站截图
-- 参数: data-screenshot_thumbnail_data:网站截图缩略图，0.5 倍分辨率
-- 参数: data-title: 网站标题
+- 参数: data-description: 文档描述
+- 参数: data-detail: 文档具体内容
+- 参数: data-screenshot_data: 文档截图
+- 参数: data-screenshot_thumbnail_data: 文档截图缩略图，0.5 倍分辨率
+- 参数: data-title: 文档标题
 
 ```sh
 {
     "code": 200,
     "data": {
-        "description": "Tap4 AI Directory is a tool provides free AI Tools Directory. Get your favorite AI tools with Tap4 AI Directory, Tap4 AI Directory aims to collect all the AI tools and provide the best for users.",
-        "detail": "### What is Tap4 AI?\n\nTap4 AI is an AI-driven platform that provides access to a vast array of AI technologies for various needs, including ChatGPT, GPT-4o for text generation and image understanding, Dalle3 for image creation, and document analysis.\n\n### How to Use Tap4 AI\n\nEvery user can utilize GPT-4o for free up to 20 times a day on tap4.ai. Subscribing to the platform grants additional benefits and extended access beyond the free usage limits.\n\n### Features of Tap4 AI\n\n#### Can I Generate Images Using Tap4 AI?\n\nYes, with Dalle3's text-to-image generation capability, users can create images, sharing credits with GPT-4o for a seamless creative experience.\n\n#### How Many GPTs are Available on Tap4 AI?\n\nTap4.ai offers nearly 200,000 GPT models for a wide variety of applications in work, study, and everyday life. You can freely use these GPTs without the need for a ChatGPT Plus subscription.\n\n#### How Can I Maximize My Use of Tap4 AI's AI Services?\n\nBy leveraging the daily free uses of GPT-4o document reading, and Dalle's image generation, users can explore a vast range of AI-powered tools to support various tasks.\n\n#### Will My Information Be Used for Your Training Data?\n\nWe highly value user privacy, and your data will not be used for any training purposes. If needed, you can delete your account at any time, and all your data will be removed as well.\n\n#### When Would I Need a Tap4 AI Subscription?\n\nIf the 20 free GPT-4o conversations per day do not meet your needs and you heavily rely on GPT-4o, we invite you to subscribe to our affordable products.",
-        "languages": [],
-        "screenshot_data": "https://demo.tap4.cn/tools/2024/6/15/tap4-ai-1718447471.png",
-        "screenshot_thumbnail_data": "https://demo.tap4.cn/tools/2024/6/15/tap4-ai-thumbnail-1718447477.png",
-        "tags": ["code-it","text-writing"],
-        "title": "Get your best AI Tools | Tap4 AI Directory",
-        "url": "https://tap4.ai"
+        "description": "从飞书提取的文档描述",
+        "detail": "从飞书提取的完整文档内容",
+        "links": [{"text": "链接文本", "href": "https://example.com"}],
+        "screenshot_data": "https://your-bucket.r2.cloudflarestorage.com/path/to/screenshot.png",
+        "screenshot_thumbnail_data": "https://your-bucket.r2.cloudflarestorage.com/path/to/thumbnail.png",
+        "tags": ["feishu", "wiki"],
+        "title": "文档标题",
+        "url": "https://example.feishu.cn/wiki/wikcnxxxxxxxxxx"
     },
     "msg": "success"
 }
@@ -177,35 +171,12 @@ curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer xxxxx
 
 ## 常见问题
 
-- 由于网站可能出现反爬虫，导致爬取失败，需要人工做二次检查
-- LLM 洗出来的信息不服务期望，可以尝试自己去优化 prompt 提示词内容
-- LLM 洗出来的内容可能仍然是提示词传过去的模板，这种也是反爬虫引起的问题，需要人工做二次检查
+- 由于飞书可能出现反爬虫，导致爬取失败，需要人工做二次检查
+- LLM 处理出来的信息不符合期望，可以尝试自己去优化 prompt 提示词内容
 - 爬虫对服务器配置有一定的要求，Zeabur 上使用免费模式很容易出现无法正常运行问题，建议付费
 
-## 产品链接
+## 相关产品
 
 ### TAP4-AI 导航站
 
 全球 AI 工具导航站，搜集全球主流的 AI 工具，目前支持免费提交收录 AI 工具。更多详情，请访问: [Tap4 AI](https://tap4.ai)
-
-### 如何获得冷启动的第一批用户
-
-以下是提交产品以获取用户的网站列表。请访问
-[StartUp Your Product List](https://github.com/6677-ai/TAP4-AI-Directory/blob/main/Startup-Your-Product-List.md)
-
-### AI 纹身生成器
-
-Tattao AI Design 是为纹身爱好者设计的纹身 AI 生成器和设计工具。如果你对此感兴趣，请访问：
-[Tattoo AI Design](https://tattooai.design)
-
-### Stable Diffusion 3 在线免费工具
-
-[Free Stable Diffusion 3 Online](https://stable-diffusion-3.online)
-
-### 免费的在线图片压缩工具
-
-[Free Type Png Tool](https://freetinypng.com)
-
-### 免费在线 AI 内容检测工具
-
-[Free GPT2 Output Detector](https://openai-openai-detector.com/)
